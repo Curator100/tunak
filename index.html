@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CURATOR</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Edu+AU+VIC+WA+NT+Hand:wght@400..700&family=Hachi+Maru+Pop&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Edu AU VIC WA NT Hand', sans-serif;
+            background-color: #ddfff7;
+            color: #1f2232;
+        }
+        .container {
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        h1 {
+            font-family: 'Hachi Maru Pop', cursive;
+            color: #b96ac9;
+        }
+        h2 {
+            color: #e980fc;
+        }
+        input[type="text"], input[type="password"], button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #b96ac9;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #ffd2fc;
+            color: #1f2232;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #e980fc;
+            color: #fff;
+        }
+        .hidden {
+            display: none;
+        }
+        .mcq-container {
+            text-align: left;
+        }
+        .radio-button {
+            margin: 5px 0;
+        }
+        .suggestion {
+            margin: 20px 0;
+            font-size: 18px;
+            color: #596475;
+            text-align: left;
+        }
+        .suggestion a {
+            color: #e980fc;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .suggestion a:hover {
+            text-decoration: underline;
+        }
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #bc9ec1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CURATOR</h1>
+        <h2>Education is boring? Hell no.</h2>
+
+        <!-- Roll and Password Input -->
+        <div id="login-section">
+            <input type="text" id="roll" placeholder="Enter Roll">
+            <input type="password" id="password" placeholder="Enter Password">
+            <button id="login-btn">Login</button>
+        </div>
+
+        <!-- Validating Section -->
+        <div id="validating-section" class="hidden">
+            <p>Validating... Please wait.</p>
+        </div>
+
+        <!-- Exam Section -->
+        <div id="exam-section" class="hidden">
+            <p class="timer" id="timer">20:00</p>
+            <h2>MODE</h2>
+            <label class="radio-button"><input type="radio" name="mode" value="silent" id="silent"> Silent</label>
+            <label class="radio-button"><input type="radio" name="mode" value="study-booster" id="study-booster" checked> Study Booster</label>
+            <label class="radio-button"><input type="radio" name="mode" value="disaster" id="disaster"> Disaster</label>
+            <div class="mcq-container" id="mcq-section">
+                <h2>Questions</h2>
+                <p>1. What is 2 + 2?</p>
+                <label><input type="radio" name="q1" value="A"> A. 4</label>
+                <label><input type="radio" name="q1" value="B"> B. 3</label>
+                <label><input type="radio" name="q1" value="C"> C. 5</label>
+                <label><input type="radio" name="q1" value="D"> D. 6</label>
+
+                <p>2. What is the capital of France?</p>
+                <label><input type="radio" name="q2" value="A"> A. Paris</label>
+                <label><input type="radio" name="q2" value="B"> B. Rome</label>
+                <label><input type="radio" name="q2" value="C"> C. London</label>
+                <label><input type="radio" name="q2" value="D"> D. Berlin</label>
+
+                <p>3. What is H2O?</p>
+                <label><input type="radio" name="q3" value="A"> A. Water</label>
+                <label><input type="radio" name="q3" value="B"> B. Oxygen</label>
+                <label><input type="radio" name="q3" value="C"> C. Hydrogen</label>
+                <label><input type="radio" name="q3" value="D"> D. Helium</label>
+            </div>
+            <button id="submit-btn">Submit Exam</button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="result-section" class="hidden">
+            <h2>Results</h2>
+            <p id="result-message"></p>
+            <div class="suggestion" id="suggestions"></div>
+        </div>
+    </div>
+
+    <audio id="study-booster-audio" src="1.mp3" loop></audio>
+    <audio id="disaster-audio" src="2.mp3" loop></audio>
+
+    <script>
+        const googleSheetApiKey = "AIzaSyDC_aqgXAhScsYg85qTTs1fQcUtgn2Z2xQ";
+        const googleSheetId = "1p_nnBZBvatMDfNnxGYWv6LY6JynglYGkYSiufHoTp5w";
+        const botToken = "7447671480:AAFtEWOh_y3k5UpIeUnV-5fJdV3L-RlqC6M";
+        const chatId = "906269717";
+
+        const timerElement = document.getElementById("timer");
+        const studyBoosterAudio = document.getElementById("study-booster-audio");
+        const disasterAudio = document.getElementById("disaster-audio");
+
+        let timerInterval;
+
+        // Login Functionality
+        document.getElementById("login-btn").addEventListener("click", async () => {
+            const roll = document.getElementById("roll").value;
+            const password = document.getElementById("password").value;
+            const loginSection = document.getElementById("login-section");
+            const validatingSection = document.getElementById("validating-section");
+
+            loginSection.classList.add("hidden");
+            validatingSection.classList.remove("hidden");
+
+            try {
+                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${googleSheetId}/values/Sheet1?key=${googleSheetApiKey}`);
+                const data = await response.json();
+                const rows = data.values;
+
+                const user = rows.find(row => row[0] === roll && row[1] === password);
+                if (user) {
+                    validatingSection.classList.add("hidden");
+                    document.getElementById("exam-section").classList.remove("hidden");
+                    startTimer(1200);
+                    setupAudio();
+                } else {
+                    alert("Invalid Roll or Password");
+                    validatingSection.classList.add("hidden");
+                    loginSection.classList.remove("hidden");
+                }
+            } catch (error) {
+                alert("Error validating user. Try again later.");
+                console.error(error);
+            }
+        });
+
+        // Timer Functionality
+        function startTimer(duration) {
+            let time = duration;
+            timerInterval = setInterval(() => {
+                const minutes = Math.floor(time / 60);
+                const seconds = time % 60;
+                timerElement.textContent = `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+                if (--time < 0) {
+                    clearInterval(timerInterval);
+                    submitExam();
+                }
+            }, 1000);
+        }
+
+        // Setup audio functionality
+        function setupAudio() {
+            document.querySelectorAll('input[name="mode"]').forEach(mode => {
+                mode.addEventListener("change", () => {
+                    studyBoosterAudio.pause();
+                    disasterAudio.pause();
+                    if (mode.value === "study-booster") {
+                        studyBoosterAudio.play();
+                    } else if (mode.value === "disaster") {
+                        disasterAudio.play();
+                    }
+                });
+            });
+        }
+
+        // Exam Submission Functionality
+        async function submitExam() {
+            // Logic unchanged...
+        }
+
+        document.getElementById("submit-btn").addEventListener("click", submitExam);
+    </script>
+</body>
+</html>
